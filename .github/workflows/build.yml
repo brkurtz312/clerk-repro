@@ -26,5 +26,10 @@ jobs:
           eas-version: latest
           token: ${{ secrets.EXPO_TOKEN }}
 
+      - name: Initialize EAS project
+        run: eas init --account brkurtz --non-interactive
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+
       - name: EAS build + submit (production, iOS)
         run: eas build --platform ios --profile production --non-interactive --auto-submit
