@@ -9,7 +9,10 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.callscheduler.clerkrepro"
+      "bundleIdentifier": "com.callscheduler.clerkrepro",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "package": "com.callscheduler.clerkrepro",
@@ -25,6 +28,11 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": ["@clerk/expo"],
-    "owner": "brkurtz"
+    "owner": "brkurtz",
+    "extra": {
+      "eas": {
+        "projectId": "3e1b04eb-d7fd-4112-b092-9f32992b8e37"
+      }
+    }
   }
 }
