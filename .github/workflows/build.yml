@@ -5,7 +5,7 @@ on:
 
 jobs:
   build:
-    name: EAS build + submit (production, iOS)
+    name: EAS build (production, iOS)
     runs-on: ubuntu-latest
 
     steps:
@@ -31,5 +31,5 @@ jobs:
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
 
-      - name: EAS build + submit (production, iOS)
-        run: eas build --platform ios --profile production --non-interactive --auto-submit
+      - name: EAS build (production, iOS)
+        run: eas build --platform ios --profile production --non-interactive
