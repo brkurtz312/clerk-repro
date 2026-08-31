@@ -9,10 +9,22 @@ function SignInScreen() {
   const { signIn, fetchStatus } = useSignIn();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
+  const [result, setResult] = useState<string | null>(null);
 
-  const handleSubmit = async () => {
-    setError(null);
+  const report = (err: unknown) => {
+    console.error("Sign-in failed:", err);
+    const detail = err instanceof Error ? err.message : String(err);
+    const stack =
+      err instanceof Error && err.stack ? err.stack.split("\n").slice(0, 6).join(" | ") : "no stack";
+    setResult(`THREW: ${detail} STACK: ${stack}`);
+  };
+
+  // Reproduces the bug: copying signIn.create into a local detaches it from its
+  // receiver, so the method cannot reach its private sign-in state. Under
+  // Hermes every call throws "attempted to use private field on non-instance"
+  // before any network request is made.
+  const handleDetached = async () => {
+    setResult(null);
     try {
       type PasswordSignInCreateParams = Omit<Parameters<typeof signIn.create>[0], "strategy"> & {
         strategy: "password";
@@ -21,13 +33,30 @@ function SignInScreen() {
         params: PasswordSignInCreateParams,
       ) => Promise<unknown>;
       await createPasswordSignIn({ strategy: "password", identifier: email, password });
+      setResult("Detached call returned without throwing");
     } catch (err) {
-      console.error("Sign-in failed:", err);
-      const detail = err instanceof Error ? err.message : String(err);
-      const stack = err instanceof Error && err.stack ? err.stack.split("\n").slice(0, 6).join(" | ") : "no stack";
-      setError(`${detail} STACK: ${stack}`);
+      report(err);
     }
   };
+
+  // The fix: call the factor-specific method on signIn itself, so the receiver
+  // is intact. Reaches the Clerk API and resolves with { error } / a status.
+  const handleAttached = async () => {
+    setResult(null);
+    try {
+      const { error } = await signIn.password({ identifier: email, password });
+      setResult(
+        error
+          ? `Reached Clerk API — error: ${error.code} (${error.message})`
+          : `Reached Clerk API — status: ${signIn.status}`,
+      );
+    } catch (err) {
+      report(err);
+    }
+  };
+
+  const busy = fetchStatus === "fetching";
+  const disabled = !email || !password || busy;
 
   return (
     <View style={styles.container}>
@@ -47,12 +76,17 @@ function SignInScreen() {
         onChangeText={setPassword}
       />
       <Button
-        title={fetchStatus === "fetching" ? "Signing in..." : "Sign in"}
-        onPress={handleSubmit}
-        disabled={!email || !password || fetchStatus === "fetching"}
+        title={busy ? "Signing in..." : "A. Detached signIn.create (throws)"}
+        onPress={handleDetached}
+        disabled={disabled}
       />
-      {fetchStatus === "fetching" && <ActivityIndicator />}
-      {error && <Text style={styles.error}>{error}</Text>}
+      <Button
+        title={busy ? "Signing in..." : "B. Attached signIn.password (works)"}
+        onPress={handleAttached}
+        disabled={disabled}
+      />
+      {busy && <ActivityIndicator />}
+      {result && <Text style={styles.result}>{result}</Text>}
     </View>
   );
 }
@@ -69,5 +103,5 @@ const styles = StyleSheet.create({
   container: { flex: 1, justifyContent: "center", padding: 24, gap: 12 },
   title: { fontSize: 20, fontWeight: "700", marginBottom: 12 },
   input: { borderWidth: 1, borderColor: "#ccc", borderRadius: 8, padding: 12 },
-  error: { color: "red", marginTop: 12 },
+  result: { marginTop: 12 },
 });
